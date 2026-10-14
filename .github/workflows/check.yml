@@ -1,0 +1,28 @@
+name: Check
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  check:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, macos-15]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: cachix/install-nix-action@3c6342b75005b9cc7c7d4069c3e9179247c89012 # v31
+        with:
+          extra_nix_config: |
+            sandbox = true
+      - run: nix flake check --print-build-logs
+      - run: nix fmt -- --check flake.nix package.nix
+      - name: Verify non-Nix preparation, lockfile and runtime
+        run: |
+          nix develop --command node scripts/prepare-source.mjs
+          nix develop --command npm ci --prefix work --ignore-scripts --no-fund
+          nix develop --command npm audit --prefix work
+          nix develop --command node tests/source.mjs work
+          nix develop --command bash -c 'node tests/runtime.mjs "$(command -v node)" work work/bin/meshcommander'

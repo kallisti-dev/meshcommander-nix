@@ -1,0 +1,12 @@
+MeshCommander standalone distribution
+=====================================
+
+MeshCommander 0.9.5-a npm source:
+https://registry.npmjs.org/meshcommander/-/meshcommander-0.9.5-a.tgz
+SHA-256 (base64): NbF/MAFGg0bRSjEmKuQAiIN6LG5RccCl1gNqFDbJsPU=
+Upstream author: Ylian Saint-Hilaire
+Copyright: Intel Corporation; see the source's Apache-2.0 LICENSE and headers.
+
+Standalone packaging and repository support files:
+Copyright 2024-2026 Adam Curtis. Licensed under the Apache License, Version 2.0;
+see this repository's LICENSE.
