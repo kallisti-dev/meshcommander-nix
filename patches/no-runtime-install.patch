@@ -1,0 +1,12 @@
+diff --git a/meshcommander.js b/meshcommander.js
+index f7f1ab5..1f7245d 100644
+--- a/meshcommander.js
++++ b/meshcommander.js
+@@ -36,4 +36,4 @@ function InstallModule(modulename, func, tag1, tag2) {
+     }
+ }
+ 
+-InstallModules(['minimist', 'express', 'express-ws'], function () { CreateMeshCommanderServer().Start(); });
+\ No newline at end of file
++CreateMeshCommanderServer().Start();
+\ No newline at end of file

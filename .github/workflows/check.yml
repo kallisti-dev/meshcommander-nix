@@ -19,10 +19,3 @@ jobs:
             sandbox = true
       - run: nix flake check --print-build-logs
       - run: nix fmt -- --check flake.nix package.nix
-      - name: Verify non-Nix preparation, lockfile and runtime
-        run: |
-          nix develop --command node scripts/prepare-source.mjs
-          nix develop --command npm ci --prefix work --ignore-scripts --no-fund
-          nix develop --command npm audit --prefix work
-          nix develop --command node tests/source.mjs work
-          nix develop --command bash -c 'node tests/runtime.mjs "$(command -v node)" work work/bin/meshcommander'

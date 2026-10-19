@@ -1,0 +1,38 @@
+diff --git a/package.json b/package.json
+index 1db8927..de21f19 100644
+--- a/package.json
++++ b/package.json
+@@ -9,7 +9,7 @@
+   },
+   "dependencies": {
+     "express": "^4.13.4",
+-    "express-ws": "^2.0.0",
++    "express-ws": "5.0.2",
+     "minimist": "^1.2.0"
+   },
+   "description": "MeshCommander web server",
+@@ -38,6 +38,9 @@
+   ],
+   "name": "meshcommander",
+   "optionalDependencies": {},
++  "overrides": {
++    "ws": "8.22.0"
++  },
+   "readme": "readme.txt",
+   "repository": {
+     "type": "git",
+diff --git a/webserver.js b/webserver.js
+index 71000a4..3aa8c72 100644
+--- a/webserver.js
++++ b/webserver.js
+@@ -88,8 +88,8 @@ module.exports.CreateWebServer = function (args) {
+         });
+         
+         // If the web socket is closed, close the associated TCP connection.
+-        ws.on('close', function (req) {
+-            obj.debug("Closing web socket connection to " + ws.upgradeReq.query.host + ':' + ws.upgradeReq.query.port + '.');
++        ws.on('close', function () {
++            obj.debug("Closing web socket connection to " + req.query.host + ':' + req.query.port + '.');
+             if (ws.forwardclient) { try { ws.forwardclient.destroy(); } catch (e) { } }
+         });
+         

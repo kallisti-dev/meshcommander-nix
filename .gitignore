@@ -1,5 +1,3 @@
 .direnv/
 result
 result-*
-work/
-node_modules/

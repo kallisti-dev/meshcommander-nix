@@ -1,80 +1,90 @@
 {
-  description = "Standalone MeshCommander with a pinned modern WebSocket runtime";
+  description = "MeshCommander, the Intel AMT web console, built from current upstream source";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
   outputs =
     { self, nixpkgs }:
     let
-      systems = [
-        "aarch64-darwin"
-        "x86_64-linux"
-      ];
-      forAllSystems = nixpkgs.lib.genAttrs systems;
-      pkgsFor = system: import nixpkgs { inherit system; };
+      inherit (nixpkgs) lib;
+      forAllSystems =
+        f:
+        lib.genAttrs [
+          "aarch64-darwin"
+          "aarch64-linux"
+          "x86_64-linux"
+        ] (system: f nixpkgs.legacyPackages.${system});
     in
     {
-      packages = forAllSystems (
-        system:
-        let
-          pkgs = pkgsFor system;
-          meshcommander = pkgs.callPackage ./package.nix { };
-        in
-        {
-          inherit meshcommander;
-          default = meshcommander;
-        }
-      );
+      overlays.default = final: _prev: {
+        meshcommander = final.callPackage ./package.nix { };
+      };
 
-      apps = forAllSystems (system: {
-        default = {
-          type = "app";
-          program = "${self.packages.${system}.meshcommander}/bin/meshcommander";
-          meta.description = "Run the MeshCommander web console on loopback";
-        };
+      packages = forAllSystems (pkgs: {
+        meshcommander = pkgs.callPackage ./package.nix { };
+        default = self.packages.${pkgs.stdenv.hostPlatform.system}.meshcommander;
       });
 
       checks = forAllSystems (
-        system:
+        pkgs:
         let
-          pkgs = pkgsFor system;
-          package = self.packages.${system}.meshcommander;
+          package = self.packages.${pkgs.stdenv.hostPlatform.system}.meshcommander;
         in
         {
           inherit package;
-          source = pkgs.runCommand "meshcommander-source-check" { nativeBuildInputs = [ pkgs.nodejs_24 ]; } ''
-            node ${./tests/source.mjs} ${package}/lib/node_modules/meshcommander
-            touch $out
-          '';
+
           runtime =
             pkgs.runCommand "meshcommander-runtime-check"
               {
-                nativeBuildInputs = [ pkgs.nodejs_24 ];
+                nativeBuildInputs = [
+                  pkgs.nodejs
+                  pkgs.openssl
+                ];
                 __darwinAllowLocalNetworking = true;
               }
               ''
-                node ${./tests/runtime.mjs} ${package}/bin/meshcommander ${package}/lib/node_modules/meshcommander
+                openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=localhost \
+                  -keyout key.pem -out cert.pem 2>/dev/null
+                node ${./tests/runtime.mjs} ${lib.getExe package} \
+                  ${package}/lib/node_modules/meshcommander key.pem cert.pem
+                touch $out
+              '';
+
+          # Rebuilds the pages published in the npm tarball from the upstream
+          # commit they were compiled from, and compares them with the originals.
+          web-compiler =
+            pkgs.runCommand "meshcommander-web-compiler-check"
+              {
+                nativeBuildInputs = [
+                  pkgs.nodejs
+                  (pkgs.python3.withPackages (ps: [ ps.html5lib ]))
+                ];
+                webSrc = pkgs.fetchFromGitHub {
+                  owner = "Ylianst";
+                  repo = "MeshCommander";
+                  rev = "3fd373c9060603fa432168f1a779e107623b4154";
+                  hash = "sha256-KKfyjbJcaHyyLdcp4CaIPnZho6pMCkLc3Lkv904wrgQ=";
+                };
+              }
+              ''
+                tar -xzf ${package.src} package/public
+                node ${./compile-ui.mjs} "$webSrc" compiled
+                python3 ${./tests/compare-pages.py} package/public compiled
                 touch $out
               '';
         }
       );
 
-      devShells = forAllSystems (
-        system:
-        let
-          pkgs = pkgsFor system;
-        in
-        {
-          default = pkgs.mkShell {
-            packages = [
-              pkgs.nodejs_24
-              pkgs.nixfmt
-              pkgs.prefetch-npm-deps
-            ];
-          };
-        }
-      );
+      devShells = forAllSystems (pkgs: {
+        default = pkgs.mkShell {
+          packages = [
+            pkgs.nodejs
+            pkgs.nixfmt
+            pkgs.prefetch-npm-deps
+          ];
+        };
+      });
 
-      formatter = forAllSystems (system: (pkgsFor system).nixfmt);
+      formatter = forAllSystems (pkgs: pkgs.nixfmt);
     };
 }
